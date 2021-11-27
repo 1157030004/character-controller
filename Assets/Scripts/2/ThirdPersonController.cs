@@ -20,7 +20,7 @@ namespace StarterAssets
         #region Player
         [Header("Player")]
         [Tooltip("Walk speed of the character in m/s")]
-        public float WalkSpeed = 2.0f;
+        public float WalkSpeed = 2.3f;
         [Tooltip("Run speed of the character in m/s")]
         public float RunSpeed = 5.3f;
         [Tooltip("Sprint speed of the character in m/s")]
@@ -159,7 +159,7 @@ namespace StarterAssets
             helper = new GameObject().transform;
             helper.name = "climb helper";
             // a_hook.Init(this, helper);
-            ClimbingCheck();
+            // ClimbingCheck();
 
             // reset our timeouts on start
             _jumpTimeoutDelta = JumpTimeout;
@@ -173,8 +173,8 @@ namespace StarterAssets
 
             JumpAndGravity();
             GroundedCheck();
-            // Move();
-            Tick(_climbTimeoutDelta);
+            Move();
+            // Tick(_climbTimeoutDelta);
         }
 
         private void LateUpdate()
@@ -253,26 +253,31 @@ namespace StarterAssets
             }
             #endregion
             #region Snapped Vertical
-            if (verticalMovement > 0 && verticalMovement < 1.55f)
+            if (verticalMovement > 0 && verticalMovement < 2.3f)
             {
+                Debug.Log("verticalMovement 1: " + verticalMovement);
 
                 snappedVertical = 0.5f;
             }
             else if (verticalMovement > 5.3f)
             {
                 snappedVertical = 1f;
+                Debug.Log("verticalMovement 2: " + verticalMovement);
             }
             else if (verticalMovement < 0 && verticalMovement > -0.5f)
             {
                 snappedVertical = -0.5f;
+                Debug.Log("verticalMovement 3: " + verticalMovement);
             }
             else if (verticalMovement < -0.5f)
             {
                 snappedVertical = -1f;
+                Debug.Log("verticalMovement 4: " + verticalMovement);
             }
             else
             {
                 snappedVertical = 0;
+                Debug.Log("verticalMovement 5: " + verticalMovement);
             }
             #endregion
 
