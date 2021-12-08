@@ -3,6 +3,7 @@ using UnityEngine;
 #if ENABLE_INPUT_SYSTEM && STARTER_ASSETS_PACKAGES_CHECKED
 using UnityEngine.InputSystem;
 #endif
+using DG.Tweening;
 
 /* Note: animations are called via the controller for both the character and capsule using animator null checks
  */
@@ -25,6 +26,8 @@ namespace StarterAssets
         public float RunSpeed = 5.3f;
         [Tooltip("Sprint speed of the character in m/s")]
         public float SprintSpeed = 7.335f;
+        [Tooltip("Slope speed of the character in m/s")]
+        public float SlopeSpeed = 8f;
         [Tooltip("How fast the character turns to face movement direction")]
         [Range(0.0f, 0.3f)]
         public float RotationSmoothTime = 0.12f;
@@ -69,8 +72,8 @@ namespace StarterAssets
         Vector3 targetPos;
         Quaternion startRot;
         Quaternion targetRot;
+        [SerializeField] float slopeLimit = 45f;
         public float positionOffset;
-        public float offsetFromWall = 0.3f;
         public float speed_multiplier = 0.2f;
         public float climbSpeed = 3.0f;
         public float climbRotateSpeed = 5.0f;
@@ -78,6 +81,12 @@ namespace StarterAssets
         public IKSnapshot baseIKsnapshot;
         public FreeClimbAnimatorHook a_hook;
         Transform helper;
+        #endregion
+
+        #region Player Slope Sliding
+        public float offsetFromWall = 0.3f;
+        [SerializeField] bool WillSlideOnSlopes = true;
+
         #endregion
 
         #region Cinemachine
@@ -131,10 +140,11 @@ namespace StarterAssets
         #region classes
         public Animator _animator;
         private CharacterController _controller;
-        private StarterAssetsInputs _input;
+        public StarterAssetsInputs _input;
         private GameObject _mainCamera;
         #endregion
 
+        private Vector3 hitPointNormal;
         private const float _threshold = 0.01f;
 
         private bool _hasAnimator;
@@ -174,6 +184,7 @@ namespace StarterAssets
             JumpAndGravity();
             GroundedCheck();
             Move();
+            // Wrap();
             // Tick(_climbTimeoutDelta);
         }
 
@@ -193,6 +204,24 @@ namespace StarterAssets
             _animIDMotionSpeed = Animator.StringToHash("MotionSpeed");
         }
 
+        private bool isSliding
+        {
+
+            get
+            {
+                Vector3 origin = transform.position + (Vector3.up);
+                Debug.DrawRay(origin, Vector3.down, Color.red);
+                if (_controller.isGrounded && Physics.Raycast(origin, Vector3.down, out RaycastHit slopeHit, 2f))
+                {
+                    hitPointNormal = slopeHit.normal;
+                    return Vector3.Angle(hitPointNormal, Vector3.up) > slopeLimit;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
         private void GroundedCheck()
         {
             // set sphere position, with offset
@@ -255,29 +284,24 @@ namespace StarterAssets
             #region Snapped Vertical
             if (verticalMovement > 0 && verticalMovement < 2.3f)
             {
-                Debug.Log("verticalMovement 1: " + verticalMovement);
 
                 snappedVertical = 0.5f;
             }
             else if (verticalMovement > 5.3f)
             {
                 snappedVertical = 1f;
-                Debug.Log("verticalMovement 2: " + verticalMovement);
             }
             else if (verticalMovement < 0 && verticalMovement > -0.5f)
             {
                 snappedVertical = -0.5f;
-                Debug.Log("verticalMovement 3: " + verticalMovement);
             }
             else if (verticalMovement < -0.5f)
             {
                 snappedVertical = -1f;
-                Debug.Log("verticalMovement 4: " + verticalMovement);
             }
             else
             {
                 snappedVertical = 0;
-                Debug.Log("verticalMovement 5: " + verticalMovement);
             }
             #endregion
 
@@ -348,6 +372,9 @@ namespace StarterAssets
 
             Vector3 targetDirection = Quaternion.Euler(0.0f, _targetRotation, 0.0f) * Vector3.forward;
 
+            if (WillSlideOnSlopes && isSliding)
+                targetDirection += new Vector3(hitPointNormal.x, -hitPointNormal.y, hitPointNormal.z) * SlopeSpeed;
+
             // move the player
             _controller.Move(targetDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
 
@@ -363,9 +390,17 @@ namespace StarterAssets
             }
         }
 
+        public void Wrap()
+        {
+            if (_input.warp)
+            {
+                transform.DOMove(new Vector3(0, 10, 0), 1f).SetEase(Ease.InExpo);
+
+            }
+
+        }
+
         #region Climbing
-
-
         private void ClimbingCheck()
         {
             Vector3 origin = transform.position;
